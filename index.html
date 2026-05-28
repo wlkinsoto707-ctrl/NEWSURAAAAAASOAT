@@ -140,5 +140,79 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+// Sobrescribir la función de consulta para usar nuestro robot
+(function() {
+    // Esperar a que React cargue completamente
+    const esperarReact = setInterval(() => {
+        if (window.React && document.querySelector('[data-testid="button-submit"]')) {
+            clearInterval(esperarReact);
+            console.log('✅ Robot RUNT listo para interceptar consultas');
+            
+            // Modificar el comportamiento del formulario
+            const formulario = document.querySelector('form');
+            if (formulario) {
+                const submitOriginal = formulario.onsubmit;
+                
+                formulario.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    // Obtener datos del formulario
+                    const tipoDocumento = document.querySelector('select')?.value || 'C';
+                    const documento = document.querySelector('input[type="text"]')?.value;
+                    const placa = document.querySelectorAll('input[type="text"]')[1]?.value;
+                    
+                    if (!documento || !placa) {
+                        alert('Por favor complete todos los campos');
+                        return;
+                    }
+                    
+                    // Mostrar loading
+                    const boton = document.querySelector('button[type="submit"]');
+                    const textoOriginal = boton.textContent;
+                    boton.disabled = true;
+                    boton.textContent = '🤖 Consultando RUNT...';
+                    
+                    try {
+                        // Llamar a nuestro robot
+                        const response = await fetch('/api/consultar-runt', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                documentType: tipoDocumento,
+                                documentNumber: documento,
+                                plate: placa.toUpperCase()
+                            })
+                        });
+                        
+                        const resultado = await response.json();
+                        
+                        if (resultado.found) {
+                            // Simular que los datos llegaron para que React los muestre
+                            // Esto activará la UI de resultados de tu aplicación
+                            const event = new CustomEvent('runt-resultados', { detail: resultado });
+                            window.dispatchEvent(event);
+                            
+                            // Forzar actualización del estado de React
+                            if (window.__RUNT_UPDATE__) {
+                                window.__RUNT_UPDATE__(resultado);
+                            }
+                        } else {
+                            alert('Error: ' + (resultado.error || 'No se encontraron datos'));
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('Error de conexión con el servidor');
+                    } finally {
+                        boton.disabled = false;
+                        boton.textContent = textoOriginal;
+                    }
+                });
+            }
+        }
+    }, 100);
+})();
+</script>
   </body>
 </html>
